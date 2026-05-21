@@ -1,0 +1,141 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn();
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity validation helper functions
+    function isValidPet(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.breed is string && data.breed.size() <= 128 &&
+             data.age is string && data.age.size() <= 128 &&
+             (data.size == 'Chico' || data.size == 'Mediano' || data.size == 'Grande') &&
+             (data.gender == 'Macho' || data.gender == 'Hembra') &&
+             data.description is string && data.description.size() <= 4000 &&
+             (data.status == 'En adopción' || data.status == 'Adoptado' || data.status == 'Recuperándose') &&
+             data.photo is string && data.photo.size() <= 1000 &&
+             (!('story' in data) || (data.story is string && data.story.size() <= 4000)) &&
+             data.addedAt is string && data.addedAt.size() <= 128;
+    }
+
+    function isValidCampaign(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.fecha is string && data.fecha.size() <= 200 &&
+             data.lugar is string && data.lugar.size() <= 400 &&
+             data.maxSlots is int && data.maxSlots >= 0 &&
+             data.totalRegistered is int && data.totalRegistered >= 0 &&
+             data.active is bool;
+    }
+
+    function isValidAppointment(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.campaignId is string && data.campaignId.size() <= 128 &&
+             data.campaignDate is string && data.campaignDate.size() <= 200 &&
+             data.ownerName is string && data.ownerName.size() <= 200 &&
+             data.ownerEmail is string && data.ownerEmail.size() <= 200 &&
+             data.ownerDni is string && data.ownerDni.size() <= 128 &&
+             data.ownerPhone is string && data.ownerPhone.size() <= 128 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             (data.petType == 'Perro' || data.petType == 'Gato') &&
+             data.petAge is string && data.petAge.size() <= 100 &&
+             data.petWeight is string && data.petWeight.size() <= 100 &&
+             (data.status == 'Pendiente' || data.status == 'Aprobado' || data.status == 'Rechazado') &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 4000)) &&
+             data.createdAt is string && data.createdAt.size() <= 128;
+    }
+
+    function isValidAdoption(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.petId is string && data.petId.size() <= 128 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             data.adopterName is string && data.adopterName.size() <= 200 &&
+             data.adopterEmail is string && data.adopterEmail.size() <= 200 &&
+             data.adopterDni is string && data.adopterDni.size() <= 128 &&
+             data.adopterPhone is string && data.adopterPhone.size() <= 128 &&
+             data.answers is map &&
+             data.answers.homeType is string && data.answers.homeType.size() <= 200 &&
+             data.answers.otherPets is string && data.answers.otherPets.size() <= 200 &&
+             data.answers.yardSecure is string && data.answers.yardSecure.size() <= 200 &&
+             data.answers.hoursAlone is string && data.answers.hoursAlone.size() <= 100 &&
+             data.answers.agreement is bool &&
+             (data.status == 'Pendiente' || data.status == 'Aprobado' || data.status == 'Rechazado') &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 4000)) &&
+             data.createdAt is string && data.createdAt.size() <= 128;
+    }
+
+    function isValidTestimonial(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             data.adopterName is string && data.adopterName.size() <= 200 &&
+             data.story is string && data.story.size() <= 8000 &&
+             data.photoUrl is string && data.photoUrl.size() <= 1000 &&
+             data.date is string && data.date.size() <= 128;
+    }
+
+    // Match patterns
+    match /pets/{petId} {
+      allow read, get: if true;
+      allow create: if isAdmin() && isValidId(petId) && isValidPet(incoming());
+      allow update: if isAdmin() && isValidId(petId) && isValidPet(incoming());
+      allow delete: if isAdmin() && isValidId(petId);
+    }
+
+    match /campaigns/{campaignId} {
+      allow read, get: if true;
+      allow create: if isAdmin() && isValidId(campaignId) && isValidCampaign(incoming());
+      allow update: if (isAdmin() && isValidId(campaignId) && isValidCampaign(incoming())) ||
+                     // Allow incrementing or decrementing slots during registration
+                     (isValidId(campaignId) && isValidCampaign(incoming()) && 
+                      incoming().diff(existing()).affectedKeys().hasOnly(['totalRegistered']));
+      allow delete: if isAdmin() && isValidId(campaignId);
+    }
+
+    match /appointments/{appointmentId} {
+      allow get: if true;
+      allow list: if isAdmin() || (resource.data.ownerDni == request.query.filters.ownerDni);
+      allow create: if isValidId(appointmentId) && isValidAppointment(incoming()) && incoming().status == 'Pendiente';
+      allow update: if isAdmin() && isValidId(appointmentId) && isValidAppointment(incoming());
+      allow delete: if isAdmin() && isValidId(appointmentId);
+    }
+
+    match /adoptions/{adoptionId} {
+      allow get: if true;
+      allow list: if isAdmin() || (resource.data.adopterDni == request.query.filters.adopterDni);
+      allow create: if isValidId(adoptionId) && isValidAdoption(incoming()) && incoming().status == 'Pendiente';
+      allow update: if isAdmin() && isValidId(adoptionId) && isValidAdoption(incoming());
+      allow delete: if isAdmin() && isValidId(adoptionId);
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read, get: if true;
+      allow create: if isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow update: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow delete: if isAdmin() && isValidId(testimonialId);
+    }
+  }
+}

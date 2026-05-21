@@ -1,0 +1,6 @@
+{
+  "name": "Cuatro Patitas",
+  "description": "Portal interactivo para rescate, adopción de mascotas y campañas de castración gratis con asistente virtual veterinario IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

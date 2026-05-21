@@ -1,0 +1,222 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'polinomicomkops@gmail.com' && request.auth.token.email_verified == true
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity validation helper functions with strict shadow-field guards
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email']) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+             (!('dni' in data) || (data.dni is string && data.dni.size() <= 50)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 100)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 400)) &&
+             (!('isAdmin' in data) || (data.isAdmin is bool));
+    }
+
+    function isValidPet(data) {
+      return data.keys().hasAll(['id', 'name', 'breed', 'addedAt', 'age', 'size', 'gender', 'description', 'status', 'photo']) &&
+             (data.keys().size() == 10 || (data.keys().size() == 11 && 'story' in data)) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.breed is string && data.breed.size() <= 128 &&
+             data.age is string && data.age.size() <= 128 &&
+             (data.size == 'Chico' || data.size == 'Mediano' || data.size == 'Grande') &&
+             (data.gender == 'Macho' || data.gender == 'Hembra') &&
+             data.description is string && data.description.size() <= 4000 &&
+             (data.status == 'En adopción' || data.status == 'Adoptado' || data.status == 'Recuperándose') &&
+             data.photo is string && data.photo.size() <= 1000 &&
+             (!('story' in data) || (data.story is string && data.story.size() <= 4000)) &&
+             data.addedAt is string && data.addedAt.size() <= 128;
+    }
+
+    function isValidCampaign(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'type', 'fecha', 'lugar', 'active']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 4000 &&
+             (data.type == 'castration' || data.type == 'vaccination' || data.type == 'fundraiser') &&
+             data.fecha is string && data.fecha.size() <= 200 &&
+             data.lugar is string && data.lugar.size() <= 400 &&
+             data.active is bool &&
+             (!('maxSlots' in data) || data.maxSlots is int) &&
+             (!('totalRegistered' in data) || data.totalRegistered is int) &&
+             (!('goalAmount' in data) || data.goalAmount is int) &&
+             (!('collectedAmount' in data) || data.collectedAmount is int) &&
+             (!('bannerImage' in data) || (data.bannerImage is string && data.bannerImage.size() <= 1000));
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['id', 'campaignId', 'campaignDate', 'ownerName', 'ownerEmail', 'ownerDni', 'ownerPhone', 'petName', 'petType', 'petAge', 'petWeight', 'status', 'createdAt']) &&
+             (data.keys().size() == 12 || (data.keys().size() == 13 && 'note' in data) || (data.keys().size() == 13 && 'userId' in data) || (data.keys().size() == 14 && 'note' in data && 'userId' in data)) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.campaignId is string && data.campaignId.size() <= 128 &&
+             data.campaignDate is string && data.campaignDate.size() <= 200 &&
+             data.ownerName is string && data.ownerName.size() <= 200 &&
+             data.ownerEmail is string && data.ownerEmail.size() <= 200 &&
+             data.ownerDni is string && data.ownerDni.size() <= 128 &&
+             data.ownerPhone is string && data.ownerPhone.size() <= 128 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             (data.petType == 'Perro' || data.petType == 'Gato') &&
+             data.petAge is string && data.petAge.size() <= 100 &&
+             data.petWeight is string && data.petWeight.size() <= 100 &&
+             (data.status == 'Pendiente' || data.status == 'Aprobado' || data.status == 'Rechazado') &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 4000)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+             data.createdAt is string && data.createdAt.size() <= 128;
+    }
+
+    function isValidAdoption(data) {
+      return data.keys().hasAll(['id', 'petId', 'petName', 'adopterName', 'adopterEmail', 'adopterDni', 'adopterPhone', 'answers', 'status', 'createdAt']) &&
+             (data.keys().size() == 10 || (data.keys().size() == 11 && 'note' in data) || (data.keys().size() == 11 && 'userId' in data) || (data.keys().size() == 12 && 'note' in data && 'userId' in data)) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.petId is string && data.petId.size() <= 128 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             data.adopterName is string && data.adopterName.size() <= 200 &&
+             data.adopterEmail is string && data.adopterEmail.size() <= 200 &&
+             data.adopterDni is string && data.adopterDni.size() <= 128 &&
+             data.adopterPhone is string && data.adopterPhone.size() <= 128 &&
+             data.answers is map &&
+             data.answers.keys().hasAll(['homeType', 'otherPets', 'yardSecure', 'hoursAlone', 'agreement']) &&
+             data.answers.keys().size() == 5 &&
+             data.answers.homeType is string && data.answers.homeType.size() <= 200 &&
+             data.answers.otherPets is string && data.answers.otherPets.size() <= 200 &&
+             data.answers.yardSecure is string && data.answers.yardSecure.size() <= 200 &&
+             data.answers.hoursAlone is string && data.answers.hoursAlone.size() <= 100 &&
+             data.answers.agreement is bool &&
+             (data.status == 'Pendiente' || data.status == 'Aprobado' || data.status == 'Rechazado') &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 4000)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+             data.createdAt is string && data.createdAt.size() <= 128;
+    }
+
+    function isValidTestimonial(data) {
+      return data.keys().hasAll(['id', 'petName', 'adopterName', 'story', 'photoUrl', 'date']) &&
+             data.keys().size() == 6 &&
+             data.id is string && data.id.size() <= 128 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             data.adopterName is string && data.adopterName.size() <= 200 &&
+             data.story is string && data.story.size() <= 8000 &&
+             data.photoUrl is string && data.photoUrl.size() <= 1000 &&
+             data.date is string && data.date.size() <= 128;
+    }
+
+    function isValidFinance(data) {
+      return data.keys().hasAll(['id', 'type', 'category', 'amount', 'description', 'date', 'createdAt']) &&
+             data.keys().size() == 7 &&
+             data.id is string && data.id.size() <= 128 &&
+             (data.type == 'expense' || data.type == 'revenue') &&
+             data.category is string && data.category.size() <= 200 &&
+             (data.amount is int || data.amount is float) &&
+             data.description is string && data.description.size() <= 4000 &&
+             data.date is string && data.date.size() <= 128 &&
+             data.createdAt is string && data.createdAt.size() <= 128;
+    }
+
+    function isValidHistoricAdopter(data) {
+      return data.keys().hasAll(['id', 'adopterName', 'adopterDni', 'adopterPhone', 'adopterEmail', 'petName', 'adoptionDate', 'createdAt']) &&
+             (data.keys().size() == 8 || (data.keys().size() == 9 && ('petBreed' in data || 'notes' in data)) || (data.keys().size() == 10 && 'petBreed' in data && 'notes' in data)) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.adopterName is string && data.adopterName.size() <= 200 &&
+             data.adopterDni is string && data.adopterDni.size() <= 128 &&
+             data.adopterPhone is string && data.adopterPhone.size() <= 128 &&
+             data.adopterEmail is string && data.adopterEmail.size() <= 200 &&
+             data.petName is string && data.petName.size() <= 200 &&
+             (!('petBreed' in data) || (data.petBreed is string && data.petBreed.size() <= 200)) &&
+             data.adoptionDate is string && data.adoptionDate.size() <= 200 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 4000)) &&
+             data.createdAt is string && data.createdAt.size() <= 128;
+    }
+
+    // Match patterns
+    match /users/{userId} {
+      allow read, get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) && 
+                    (!('isAdmin' in incoming()) || incoming().isAdmin == existing().isAdmin);
+      allow delete: if isAdmin();
+    }
+
+    match /pets/{petId} {
+      allow read, get: if true;
+      allow create: if isAdmin() && isValidId(petId) && isValidPet(incoming());
+      allow update: if isAdmin() && isValidId(petId) && isValidPet(incoming());
+      allow delete: if isAdmin() && isValidId(petId);
+    }
+
+    match /campaigns/{campaignId} {
+      allow read, get: if true;
+      allow create: if isAdmin() && isValidId(campaignId) && isValidCampaign(incoming());
+      allow update: if (isAdmin() && isValidId(campaignId) && isValidCampaign(incoming())) ||
+                     // Allow any visitor to increment slots or fundraising amount
+                     (isValidId(campaignId) && isValidCampaign(incoming()) && 
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['totalRegistered']) ||
+                       incoming().diff(existing()).affectedKeys().hasOnly(['collectedAmount'])));
+      allow delete: if isAdmin() && isValidId(campaignId);
+    }
+
+    match /appointments/{appointmentId} {
+      allow get: if true;
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.ownerEmail == request.auth.token.email || resource.data.userId == request.auth.uid)) || (resource.data.ownerDni == request.query.filters.ownerDni);
+      allow create: if isValidId(appointmentId) && isValidAppointment(incoming()) && incoming().status == 'Pendiente';
+      allow update: if isAdmin() && isValidId(appointmentId) && isValidAppointment(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /adoptions/{adoptionId} {
+      allow get: if true;
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.adopterEmail == request.auth.token.email || resource.data.userId == request.auth.uid)) || (resource.data.adopterDni == request.query.filters.adopterDni);
+      allow create: if isValidId(adoptionId) && isValidAdoption(incoming()) && incoming().status == 'Pendiente';
+      allow update: if isAdmin() && isValidId(adoptionId) && isValidAdoption(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read, get: if true;
+      allow create: if isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow update: if isAdmin() && isValidId(testimonialId) && isValidTestimonial(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /finances/{financeId} {
+      allow read, get, list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(financeId) && isValidFinance(incoming());
+      allow delete: if isAdmin() && isValidId(financeId);
+    }
+
+    match /historic_adopters/{historicId} {
+      allow read, get, list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(historicId) && isValidHistoricAdopter(incoming());
+      allow delete: if isAdmin() && isValidId(historicId);
+    }
+  }
+}

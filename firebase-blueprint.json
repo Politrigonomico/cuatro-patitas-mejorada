@@ -1,0 +1,194 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with personal identity and contact data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique Google user ID" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "email": { "type": "string", "description": "Verified email address" },
+        "photoURL": { "type": "string", "description": "Google avatar URL" },
+        "dni": { "type": "string", "description": "National ID (DNI)" },
+        "phone": { "type": "string", "description": "Contact telephone number" },
+        "address": { "type": "string", "description": "Physical living address" },
+        "isAdmin": { "type": "boolean", "description": "Whether user is an administrator" }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "Pet": {
+      "title": "Pet",
+      "description": "A pet available for adoption or undergoing recovery",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique pet ID" },
+        "name": { "type": "string", "description": "Name of the pet" },
+        "breed": { "type": "string", "description": "Breed or mixture" },
+        "age": { "type": "string", "description": "Approximate age" },
+        "size": { "type": "string", "enum": ["Chico", "Mediano", "Grande"], "description": "Size category" },
+        "gender": { "type": "string", "enum": ["Macho", "Hembra"], "description": "Gender of the pet" },
+        "description": { "type": "string", "description": "Detailed description of character and story" },
+        "status": { "type": "string", "enum": ["En adopción", "Adoptado", "Recuperándose"], "description": "Adoption or recovery status" },
+        "photo": { "type": "string", "description": "URL of the pet photo" },
+        "story": { "type": "string", "description": "Post-adoption follow-up or additional background stories" },
+        "addedAt": { "type": "string", "description": "Date added in YYYY-MM-DD style" }
+      },
+      "required": ["id", "name", "breed", "age", "size", "gender", "description", "status", "photo", "addedAt"]
+    },
+    "CuatroPatitasCampaign": {
+      "title": "CuatroPatitasCampaign",
+      "description": "An organized NGO event, castration/vaccination campaign, or fundraising drive",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique campaign ID" },
+        "title": { "type": "string", "description": "Campaign name" },
+        "description": { "type": "string", "description": "Campaign narrative or banner text" },
+        "type": { "type": "string", "enum": ["castration", "vaccination", "fundraiser"], "description": "Category of NGOs campaign" },
+        "fecha": { "type": "string", "description": "Campaign scheduled date" },
+        "lugar": { "type": "string", "description": "Campaign physical venue" },
+        "active": { "type": "boolean", "description": "Whether is currently active" },
+        "maxSlots": { "type": "integer", "description": "Maximum available slots (castration/vaccinations)" },
+        "totalRegistered": { "type": "integer", "description": "Total booked appointments (castration/vaccinations)" },
+        "goalAmount": { "type": "integer", "description": "Fundraising target goal" },
+        "collectedAmount": { "type": "integer", "description": "Currently collected amount" },
+        "bannerImage": { "type": "string", "description": "Promo image URL for event poster" }
+      },
+      "required": ["id", "title", "description", "type", "fecha", "lugar", "active"]
+    },
+    "CastrationAppointment": {
+      "title": "CastrationAppointment",
+      "description": "An appointment booked by a citizen for animal surgery or vaccination",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique appointment ID" },
+        "campaignId": { "type": "string", "description": "Associated campaign ID" },
+        "campaignDate": { "type": "string", "description": "Campaign date text" },
+        "ownerName": { "type": "string", "description": "Pet owner full name" },
+        "ownerEmail": { "type": "string", "description": "Owner email address" },
+        "ownerDni": { "type": "string", "description": "Owner National ID (DNI) to look up status" },
+        "ownerPhone": { "type": "string", "description": "Owner contact telephone" },
+        "petName": { "type": "string", "description": "Pet name to be castrated" },
+        "petType": { "type": "string", "enum": ["Perro", "Gato"], "description": "Pet animal type" },
+        "petAge": { "type": "string", "description": "Pet age" },
+        "petWeight": { "type": "string", "description": "Pet estimated weight" },
+        "status": { "type": "string", "enum": ["Pendiente", "Aprobado", "Rechazado"], "description": "Status of approval" },
+        "note": { "type": "string", "description": "Staff recommendations or decline reason" },
+        "userId": { "type": "string", "description": "Linked authenticated User ID" },
+        "createdAt": { "type": "string", "description": "Date appointment was submitted" }
+      },
+      "required": ["id", "campaignId", "campaignDate", "ownerName", "ownerEmail", "ownerDni", "ownerPhone", "petName", "petType", "petAge", "petWeight", "status", "createdAt"]
+    },
+    "AdoptionApplication": {
+      "title": "AdoptionApplication",
+      "description": "An application submitted by a citizen to adopt a specific pet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique application ID" },
+        "petId": { "type": "string", "description": "Referenced pet ID" },
+        "petName": { "type": "string", "description": "Referenced pet name" },
+        "adopterName": { "type": "string", "description": "Adopter full name" },
+        "adopterEmail": { "type": "string", "description": "Adopter email address" },
+        "adopterDni": { "type": "string", "description": "Adopter National ID (DNI) to look up application status" },
+        "adopterPhone": { "type": "string", "description": "Adopter contact telephone" },
+        "answers": {
+          "type": "object",
+          "properties": {
+            "homeType": { "type": "string", "description": "Dwelling type: Casa, Departamento, PH, etc." },
+            "otherPets": { "type": "string", "description": "Whether they have other animals" },
+            "yardSecure": { "type": "string", "description": "Yard status (enclosed / balcon red / not applicable)" },
+            "hoursAlone": { "type": "string", "description": "Number of hours pet will be left alone" },
+            "agreement": { "type": "boolean", "description": "Legal commitment to proper care" }
+          },
+          "required": ["homeType", "otherPets", "yardSecure", "hoursAlone", "agreement"],
+          "description": "Wizard answers addressing domestic environment safety"
+        },
+        "status": { "type": "string", "enum": ["Pendiente", "Aprobado", "Rechazado"], "description": "Status of the evaluation request" },
+        "note": { "type": "string", "description": "Staff feedback, terms, or decline reason" },
+        "userId": { "type": "string", "description": "Linked authenticated User ID" },
+        "createdAt": { "type": "string", "description": "Date application was submitted" }
+      },
+      "required": ["id", "petId", "petName", "adopterName", "adopterEmail", "adopterDni", "adopterPhone", "answers", "status", "createdAt"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Successful adoption follow-up memories / testimonials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique testimonial ID" },
+        "petName": { "type": "string", "description": "Adopted pet name" },
+        "adopterName": { "type": "string", "description": "Happy adopters names" },
+        "story": { "type": "string", "description": "Success narrative" },
+        "photoUrl": { "type": "string", "description": "Adoption picture URL" },
+        "date": { "type": "string", "description": "Date testimonial was posted" }
+      },
+      "required": ["id", "petName", "adopterName", "story", "photoUrl", "date"]
+    },
+    "FinanceRecord": {
+      "title": "FinanceRecord",
+      "description": "Donations, apadrinamiento payments, veterinary or logistics bills",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique transaction record ID" },
+        "type": { "type": "string", "enum": ["expense", "revenue"], "description": "Transaction classification type" },
+        "category": { "type": "string", "description": "Category like Veterinaria, Alimento, Donación, etc." },
+        "amount": { "type": "number", "description": "Financial value in Argentinian Pesos (ARS)" },
+        "description": { "type": "string", "description": "Narrative detail of the movement" },
+        "date": { "type": "string", "description": "Date of transaction execution (YYYY-MM-DD)" },
+        "createdAt": { "type": "string", "description": "Record database storage timestamp" }
+      },
+      "required": ["id", "type", "category", "amount", "description", "date", "createdAt"]
+    },
+    "HistoricAdopter": {
+      "title": "HistoricAdopter",
+      "description": "Historical paper card record migrated to secure digital database",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique historic digital entry identifier" },
+        "adopterName": { "type": "string", "description": "Migrated adopter full name" },
+        "adopterDni": { "type": "string", "description": "Adopter National ID (DNI)" },
+        "adopterPhone": { "type": "string", "description": "Adopter contact telephone" },
+        "adopterEmail": { "type": "string", "description": "Adopter contact email" },
+        "petName": { "type": "string", "description": "Migrated adopted dog or cat name" },
+        "petBreed": { "type": "string", "description": "Breed or mixture details" },
+        "adoptionDate": { "type": "string", "description": "Descriptive or formatted date of physical adoption" },
+        "notes": { "type": "string", "description": "Comments or ledger folio numbers" },
+        "createdAt": { "type": "string", "description": "Digital preservation logging timestamp" }
+      },
+      "required": ["id", "adopterName", "adopterDni", "adopterPhone", "adopterEmail", "petName", "adoptionDate", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Core profile store capturing citizen identities"
+    },
+    "/pets/{petId}": {
+      "schema": "Pet",
+      "description": "Database-wide collection of pets managed by the NGO"
+    },
+    "/campaigns/{campaignId}": {
+      "schema": "CuatroPatitasCampaign",
+      "description": "Castration, vaccination, and fundraising campaigns"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "CastrationAppointment",
+      "description": "User castration/vaccination appointments requested and managed"
+    },
+    "/adoptions/{adoptionId}": {
+      "schema": "AdoptionApplication",
+      "description": "Adoption applications submitted and monitored"
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": "Testimonial",
+      "description": "Verified adoption success stories or client feedback"
+    },
+    "/finances/{financeId}": {
+      "schema": "FinanceRecord",
+      "description": "Accounting tracker auditing NGO cash inflows and outflows"
+    },
+    "/historic_adopters/{historicId}": {
+      "schema": "HistoricAdopter",
+      "description": "Citizens history padron matching physical adoption records"
+    }
+  }
+}
